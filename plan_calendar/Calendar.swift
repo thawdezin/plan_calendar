@@ -152,25 +152,6 @@ struct HourEventView: View {
     }
 }
 
-
-//struct HourEventView: View {
-//    let hour: Int
-//    let day: Date
-//    let events: [CalendarEvent]
-//    var body: some View {
-//        ZStack {
-//            ForEach(events) { ev in
-//                let evStart = Calendar.current.component(.hour, from: ev.start)
-//                if evStart == hour {
-//                    EventBlockView(event: ev)
-//                        .frame(height: 50)
-//                        .padding(.vertical, 4)
-//                }
-//            }
-//        }
-//    }
-//}
-
 // MARK: - Calendar Cell
 struct CalendarCell: View {
     let date: Date?
