@@ -19,6 +19,7 @@ struct WeekView: View {
                 }
                 .padding(.vertical, 6)
                 Divider()
+
                 // Weekday names and dates
                 HStack(spacing: 0) {
                     Text("")
@@ -33,8 +34,10 @@ struct WeekView: View {
                         }
                         .frame(width: geo.size.width / 8, height: 30)
                     }
-                }.padding(.vertical, 8)
+                }
+                .padding(.vertical, 8)
                 Divider()
+
                 // Hours grid with day dividers
                 ScrollView(.vertical) {
                     VStack(spacing: 0) {
@@ -60,6 +63,8 @@ struct WeekView: View {
     }
 }
 
+
+
 struct CalendarView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
@@ -69,11 +74,11 @@ struct CalendarView_Previews: PreviewProvider {
 
 // MARK: - Event Data Model (with duration & label)
 struct CalendarEvent: Identifiable {
-    let id = UUID()
+    var id = UUID()
     let start: Date
     let end: Date
     let label: String
-    let color: EventColor
+    var color: EventColor
     
     // Helpers
     var timeRangeText: String {
@@ -126,23 +131,45 @@ struct EventBlockView: View {
     }
 }
 
+// MARK: - Hour Event View (fixed)
 struct HourEventView: View {
     let hour: Int
     let day: Date
     let events: [CalendarEvent]
     var body: some View {
         ZStack {
-            ForEach(events) { ev in
-                let evStart = Calendar.current.component(.hour, from: ev.start)
-                if evStart == hour {
-                    EventBlockView(event: ev)
-                        .frame(height: 50)
-                        .padding(.vertical, 4)
-                }
+            // Filter events by day and hour
+            let dayEvents = events.filter { ev in
+                Calendar.current.isDate(ev.start, inSameDayAs: day) &&
+                Calendar.current.component(.hour, from: ev.start) == hour
+            }
+            ForEach(dayEvents) { ev in
+                EventBlockView(event: ev)
+                    .frame(height: 50)
+                    .padding(.vertical, 4)
             }
         }
     }
 }
+
+
+//struct HourEventView: View {
+//    let hour: Int
+//    let day: Date
+//    let events: [CalendarEvent]
+//    var body: some View {
+//        ZStack {
+//            ForEach(events) { ev in
+//                let evStart = Calendar.current.component(.hour, from: ev.start)
+//                if evStart == hour {
+//                    EventBlockView(event: ev)
+//                        .frame(height: 50)
+//                        .padding(.vertical, 4)
+//                }
+//            }
+//        }
+//    }
+//}
 
 // MARK: - Calendar Cell
 struct CalendarCell: View {
@@ -323,23 +350,84 @@ struct CalendarView: View {
 }
 
 // MARK: - Sample Events
+//let sampleEvents: [CalendarEvent] = {
+//    let cal = Calendar.current
+//    var arr: [CalendarEvent] = []
+//    if let s1 = cal.date(bySettingHour: 9, minute: 0, second: 0, of: Date()),
+//       let e1 = cal.date(bySettingHour: 10, minute: 30, second: 0, of: Date()) {
+//        arr.append(.init(start: s1, end: e1, label: "Meeting", color: .orange))
+//    }
+//    if let s2 = cal.date(bySettingHour: 14, minute: 15, second: 10, of: Date()),
+//       let e2 = cal.date(bySettingHour: 15, minute: 0, second: 10, of: Date()) {
+//        arr.append(.init(start: s2, end: e2, label: "test", color: .red))
+//    }
+//    if let s3 = cal.date(bySettingHour: 13, minute: 15, second: 30, of: Date()),
+//       let e3 = cal.date(bySettingHour: 12, minute: 10, second: 20, of: Date()) {
+//        arr.append(.init(start: s3, end: e3, label: "Bamawl", color: .red))
+//    }
+//    return arr
+//}()
+// MARK: - Sample Events (expanded to 50 items with duplicates & varied colors)
 let sampleEvents: [CalendarEvent] = {
     let cal = Calendar.current
+    let year = cal.component(.year, from: Date())
+    guard let yesterday = cal.date(byAdding: .day, value: -1, to: Date()),
+          let tomorrow = cal.date(byAdding: .day, value: 1, to: Date()),
+          let june25 = cal.date(from: DateComponents(year: year, month: 6, day: 25))
+    else { return [] }
+    let baseDates: [(String, Date)] = [
+        ("Yesterday", yesterday),
+        ("Today", Date()),
+        ("Tomorrow", tomorrow),
+        ("June 25", june25)
+    ]
     var arr: [CalendarEvent] = []
-    if let s1 = cal.date(bySettingHour: 9, minute: 0, second: 0, of: Date()),
-       let e1 = cal.date(bySettingHour: 10, minute: 30, second: 0, of: Date()) {
-        arr.append(.init(start: s1, end: e1, label: "Meeting", color: .orange))
+    var idx = 1
+
+    // For each base date, add 4 events
+    for (label, dateBase) in baseDates {
+        let times: [(Int, Int)] = [(1,3), (1,2), (9,11), (14,15)]
+        for (startH, endH) in times {
+            if let s = cal.date(bySettingHour: startH, minute: 0, second: 0, of: dateBase),
+               let e = cal.date(bySettingHour: endH, minute: 0, second: 0, of: dateBase) {
+                arr.append(.init(
+                    start: s,
+                    end: e,
+                    label: "\(label) Event \(idx)",
+                    color: EventColor.allCases[idx % EventColor.allCases.count]
+                ))
+                idx += 1
+            }
+        }
     }
-    if let s2 = cal.date(bySettingHour: 14, minute: 15, second: 10, of: Date()),
-       let e2 = cal.date(bySettingHour: 15, minute: 0, second: 10, of: Date()) {
-        arr.append(.init(start: s2, end: e2, label: "test", color: .red))
+
+    // Duplicate existing 16 items with different colors
+    let original = arr
+    for (i, ev) in original.enumerated() {
+        var newEv = ev
+        newEv.color = EventColor.allCases[(i + 1) % EventColor.allCases.count]
+        newEv.id = UUID()
+        arr.append(newEv)
     }
-    if let s3 = cal.date(bySettingHour: 13, minute: 15, second: 30, of: Date()),
-       let e3 = cal.date(bySettingHour: 12, minute: 10, second: 20, of: Date()) {
-        arr.append(.init(start: s3, end: e3, label: "Bamawl", color: .red))
+
+    // If still less than 50, add extra events
+    while arr.count < 50 {
+        let dateBase = Date()
+        let hour = arr.count % 24
+        if let s = cal.date(bySettingHour: hour, minute: 0, second: 0, of: dateBase),
+           let e = cal.date(bySettingHour: (hour + 1) % 24, minute: 0, second: 0, of: dateBase) {
+            arr.append(.init(
+                start: s,
+                end: e,
+                label: "Extra Event \(arr.count + 1)",
+                color: EventColor.allCases[(arr.count + 1) % EventColor.allCases.count]
+            ))
+        }
     }
+
     return arr
 }()
+
 
 struct ContentView: View {
     var body: some View {
