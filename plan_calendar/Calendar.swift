@@ -1,10 +1,19 @@
 import SwiftUI
 
-// MARK: - Event Data Model
+// MARK: - Event Data Model (with duration & label)
 struct CalendarEvent: Identifiable {
     let id = UUID()
-    let date: Date
+    let start: Date
+    let end: Date
+    let label: String
     let color: EventColor
+    
+    // Helpers
+    var timeRangeText: String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "HH:mm"
+        return "\(fmt.string(from: start))–\(fmt.string(from: end))"
+    }
 }
 
 enum EventColor: CaseIterable {
@@ -19,6 +28,58 @@ enum EventColor: CaseIterable {
         }
     }
 }
+
+// MARK: - Event Block View
+struct EventBlockView: View {
+    let event: CalendarEvent
+    var body: some View {
+        HStack(spacing: 0) {
+            // Left colored bar
+            Rectangle()
+                .fill(event.color.color)
+                .frame(width: 4)
+            
+            // Content
+            VStack(spacing: 2) {
+                Text(event.timeRangeText)
+                    .font(.caption2)
+                    .bold()
+                Spacer(minLength: 0)
+                Text(event.label)
+                    .font(.caption)
+                Spacer(minLength: 0)
+            }
+            .padding(4)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(event.color.color, lineWidth: 1)
+                .background(Color.white.cornerRadius(8))
+        )
+    }
+}
+
+struct HourEventView: View {
+    let hour: Int
+    let day: Date
+    let events: [CalendarEvent]
+    
+    var body: some View {
+        ZStack {
+            ForEach(events) { ev in
+                // လိုချင်တဲ့ start/end နှစ်ခုရှိတဲ့ event ကို filter
+                let evStart = Calendar.current.component(.hour, from: ev.start)
+                if evStart == hour {
+                    EventBlockView(event: ev)
+                        .frame(height: 50) // cell height ထည့်ပေး
+                        .padding(.vertical, 4)
+                }
+            }
+        }
+    }
+}
+
 
 // MARK: - Calendar Cell
 struct CalendarCell: View {
@@ -173,14 +234,26 @@ struct MonthView: View {
             .padding()
             Divider()
             let gridItems = Array(repeating: GridItem(.flexible()), count: 7)
+            // MARK: - Month View Event Filtering ပြင်ချက်
             LazyVGrid(columns: gridItems, spacing: 10) {
-                ForEach(DateHelper.makeMonthGrid(for: month), id: \ .self) { date in
-                    CalendarCell(date: date,
-                                 events: events.filter { Calendar.current.isDate($0.date, inSameDayAs: date ?? Date()) },
-                                 isCurrentMonth: date.map { Calendar.current.isDate($0, equalTo: month, toGranularity: .month) } ?? false)
-                        .frame(height: 60)
+                ForEach(DateHelper.makeMonthGrid(for: month), id: \.self) { date in
+                    CalendarCell(
+                        date: date,
+                        // start date နဲ့ compare ပြောင်းပြီး filter
+                        events: events.filter {
+                            if let d = date {
+                                return Calendar.current.isDate($0.start, inSameDayAs: d)
+                            }
+                            return false
+                        },
+                        isCurrentMonth: date.map {
+                            Calendar.current.isDate($0, equalTo: month, toGranularity: .month)
+                        } ?? false
+                    )
+                    .frame(height: 60)
                 }
             }
+
             .padding()
         }
     }
@@ -237,26 +310,6 @@ extension DateFormatter {
     }()
 }
 
-// MARK: - HourEventView
-struct HourEventView: View {
-    let hour: Int
-    let day: Date
-    let events: [CalendarEvent]
-    var body: some View {
-        GeometryReader { geo in
-            ForEach(events) { ev in
-                let comps = Calendar.current.dateComponents([.hour], from: ev.date)
-                if comps.hour == hour {
-                    Circle()
-                        .fill(ev.color.color)
-                        .frame(width: geo.size.height * 0.8, height: geo.size.height * 0.8)
-                        .position(x: geo.size.width * 0.2, y: geo.size.height / 2)
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Main Calendar View
 enum CalendarMode { case day, week, month }
 struct CalendarView: View {
@@ -294,13 +347,18 @@ struct ContentView: View {
     }
 }
 
+// MARK: - Sample Events ပြင်ချက်
 let sampleEvents: [CalendarEvent] = {
     let cal = Calendar.current
     var arr: [CalendarEvent] = []
-    for i in 0..<10 {
-        if let d = cal.date(byAdding: .hour, value: i * 3, to: Date()) {
-            arr.append(CalendarEvent(date: d, color: EventColor.allCases[i % EventColor.allCases.count]))
-        }
+    // တစ်နေ့ ဗဟိုထားပြီး example events ၂ ခုပြ တဲ့အတွက်
+    if let start1 = cal.date(bySettingHour: 9, minute: 0, second: 0, of: Date()),
+       let end1   = cal.date(bySettingHour: 10, minute: 30, second: 0, of: Date()) {
+        arr.append(.init(start: start1, end: end1, label: "Meeting", color: .orange))
+    }
+    if let start2 = cal.date(bySettingHour: 14, minute: 15, second: 0, of: Date()),
+       let end2   = cal.date(bySettingHour: 15, minute: 0, second: 0, of: Date()) {
+        arr.append(.init(start: start2, end: end2, label: "test", color: .red))
     }
     return arr
 }()
