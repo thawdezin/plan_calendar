@@ -82,7 +82,8 @@ struct CalendarCell: View {
     let date: Date?
     let events: [CalendarEvent]
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 4) {
+            // Date number tap area
             if let d = date {
                 Button(action: {
                     print("tap on Calendar Cell of \(DateFormatter.fullDateFormatter.string(from: d))")
@@ -97,21 +98,20 @@ struct CalendarCell: View {
                     .foregroundColor(.primary)
             }
             Spacer()
-            // lower area tap lists events
-            VStack(spacing: 2) {
-                ForEach(events) { ev in
-                    EventBlockView(event: ev)
-                        .frame(height: 30)
+            // Horizontal scrollable events
+            if !events.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        ForEach(events) { ev in
+                            EventBlockView(event: ev)
+                                .frame(width: 80, height: 30)
+                        }
+                    }
+                    .padding(.horizontal, 2)
                 }
-                if events.isEmpty {
-                    Spacer()
-                }
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                if let d = date, !events.isEmpty {
-                    print("events for \(DateFormatter.fullDateFormatter.string(from: d)): \(events.map { $0.label })")
-                }
+                .frame(height: 36)
+            } else {
+                Spacer()
             }
         }
         .padding(4)
@@ -310,9 +310,13 @@ let sampleEvents: [CalendarEvent] = {
        let e1 = cal.date(bySettingHour: 10, minute: 30, second: 0, of: Date()) {
         arr.append(.init(start: s1, end: e1, label: "Meeting", color: .orange))
     }
-    if let s2 = cal.date(bySettingHour: 14, minute: 15, second: 0, of: Date()),
-       let e2 = cal.date(bySettingHour: 15, minute: 0, second: 0, of: Date()) {
+    if let s2 = cal.date(bySettingHour: 14, minute: 15, second: 10, of: Date()),
+       let e2 = cal.date(bySettingHour: 15, minute: 0, second: 10, of: Date()) {
         arr.append(.init(start: s2, end: e2, label: "test", color: .red))
+    }
+    if let s3 = cal.date(bySettingHour: 13, minute: 15, second: 30, of: Date()),
+       let e3 = cal.date(bySettingHour: 12, minute: 10, second: 20, of: Date()) {
+        arr.append(.init(start: s3, end: e3, label: "Bamawl", color: .red))
     }
     return arr
 }()
