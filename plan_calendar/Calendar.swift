@@ -1,181 +1,64 @@
 import SwiftUI
 
-// MARK: - Event Block View (tap prints event)
-//struct EventBlockView: View {
-//    let event: CalendarEvent
-//    var body: some View {
-//        HStack(spacing: 0) {
-//            Rectangle()
-//                .fill(event.color.color)
-//                .frame(width: 4)
-//            VStack(spacing: 2) {
-//                Text(event.timeRangeText)
-//                    .font(.caption2).bold()
-//                Spacer(minLength: 0)
-//                Text(event.label)
-//                    .font(.caption)
-//                Spacer(minLength: 0)
-//            }
-//            .padding(4)
-//            .frame(maxWidth: .infinity, maxHeight: .infinity)
-//        }
-//        .background(
-//            RoundedRectangle(cornerRadius: 8)
-//                .stroke(event.color.color, lineWidth: 1)
-//                .background(Color.white.cornerRadius(8))
-//        )
-//        .onTapGesture {
-//            print("tap on event \(event.label) from \(event.timeRangeText)")
-//        }
-//    }
-//}
-
-//// MARK: - Hour Event View (one event per hour)
-//struct HourEventView: View {
-//    let hour: Int
-//    let day: Date
-//    let events: [CalendarEvent]
-//    var body: some View {
-//        ZStack {
-//            if let ev = events.first(where: {
-//                Calendar.current.component(.hour, from: $0.start) == hour &&
-//                Calendar.current.isDate($0.start, inSameDayAs: day)
-//            }) {
-//                EventBlockView(event: ev)
-//                    .frame(height: 50)
-//                    .padding(.vertical, 4)
-//            }
-//        }
-//    }
-//}
-
-// MARK: - Calendar Cell (Month)
-//struct CalendarCell: View {
-//    let date: Date?
-//    let events: [CalendarEvent]
-//    var body: some View {
-//        VStack(spacing: 4) {
-//            if let d = date {
-//                Button {
-//                    print("tap on Calendar Cell of \(DateFormatter.fullDateFormatter.string(from: d))")
-//                } label: {
-//                    Text(DateFormatter.dayFormatter.string(from: d))
-//                        .font(.caption)
-//                        .foregroundColor(.primary)
-//                }
-//            } else {
-//                Text("")
-//                    .font(.caption)
-//                    .foregroundColor(.primary)
-//            }
-//            Spacer()
-//            if !events.isEmpty {
-//                ScrollView(.horizontal, showsIndicators: false) {
-//                    HStack(spacing: 4) {
-//                        ForEach(events) { ev in
-//                            EventBlockView(event: ev)
-//                                .frame(width: 80, height: 30)
-//                        }
-//                    }
-//                    .padding(.horizontal, 2)
-//                }
-//                .frame(height: 36)
-//            } else {
-//                Spacer()
-//            }
-//        }
-//        .padding(4)
-//        .background(
-//            RoundedRectangle(cornerRadius: 4)
-//                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-//        )
-//    }
-//}
-
-
-
 // MARK: - Week View (fixed)
 struct WeekView: View {
     @Binding var weekStart: Date
     var events: [CalendarEvent]
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack(spacing: 0) {
-                Button { weekStart = Calendar.current.date(byAdding: .day, value: -7, to: weekStart)! } label: { Image(systemName: "chevron.left") }
-                Spacer()
-                let end = Calendar.current.date(byAdding: .day, value: 6, to: weekStart)!
-                Text("< \(DateFormatter.headerFormatter.string(from: weekStart)) - \(DateFormatter.headerFormatter.string(from: end)) >")
-                    .font(.subheadline)
-                Spacer()
-                Button { weekStart = Calendar.current.date(byAdding: .day, value: 7, to: weekStart)! } label: { Image(systemName: "chevron.right") }
-            }
-            .padding(.vertical, 6)
-            Divider()
-            // Weekday names and dates
-            HStack(spacing: 0) {
-                Text("")
-                    .frame(width: 40)
-                ForEach(0..<7) { idx in
-                    let d = Calendar.current.date(byAdding: .day, value: idx, to: weekStart)!
-                    VStack(spacing: 2) {
-                        Text(DateFormatter.weekdayShortFormatter.string(from: d))
-                            .font(.caption2)
-                        Text(DateFormatter.dayFormatter.string(from: d))
-                            .font(.caption2)
-                    }
-                    .frame(width: 80, height: 30)
-                    if idx < 6 {
-                        Divider().frame(width: 1)
-                    }
+        GeometryReader { geo in
+            VStack(spacing: 0) {
+                // Header
+                HStack(spacing: 0) {
+                    Button { weekStart = Calendar.current.date(byAdding: .day, value: -7, to: weekStart)! } label: { Image(systemName: "chevron.left") }
+                        .frame(width: geo.size.width / 8)
+                    Text("\(DateFormatter.headerFormatter.string(from: weekStart)) - \(DateFormatter.headerFormatter.string(from: Calendar.current.date(byAdding: .day, value: 6, to: weekStart)!))")
+                        .font(.subheadline)
+                        .frame(width: geo.size.width * 6 / 8)
+                    Button { weekStart = Calendar.current.date(byAdding: .day, value: 7, to: weekStart)! } label: { Image(systemName: "chevron.right") }
+                        .frame(width: geo.size.width / 8)
                 }
-            }
-            Divider()
-            // Hours grid with day dividers
-            ScrollView(.vertical) {
-                VStack(spacing: 0) {
-                    ForEach(0..<24) { hour in
-                        HStack(spacing: 0) {
-                            Text(String(format: "%02d", hour))
+                .padding(.vertical, 6)
+                Divider()
+                // Weekday names and dates
+                HStack(spacing: 0) {
+                    Text("")
+                        .frame(width: geo.size.width / 8)
+                    ForEach(0..<7) { idx in
+                        let d = Calendar.current.date(byAdding: .day, value: idx, to: weekStart)!
+                        VStack(spacing: 2) {
+                            Text(DateFormatter.weekdayShortFormatter.string(from: d))
                                 .font(.caption2)
-                                .frame(width: 40)
-                            Divider()
-                            ForEach(0..<7) { idx in
-                                let d = Calendar.current.date(byAdding: .day, value: idx, to: weekStart)!
-                                HourEventView(hour: hour, day: d, events: events)
-                                    .frame(width: 80, height: 60)
-                                if idx < 6 {
-                                    Divider().frame(width: 1)
+                            Text(DateFormatter.dayFormatter.string(from: d))
+                                .font(.caption2)
+                        }
+                        .frame(width: geo.size.width / 8, height: 30)
+                    }
+                }.padding(.vertical, 8)
+                Divider()
+                // Hours grid with day dividers
+                ScrollView(.vertical) {
+                    VStack(spacing: 0) {
+                        ForEach(0..<24) { hour in
+                            HStack(spacing: 0) {
+                                Text(String(format: "%02d", hour))
+                                    .font(.caption2)
+                                    .frame(width: geo.size.width / 8)
+                                Divider()
+                                ForEach(0..<7) { idx in
+                                    let d = Calendar.current.date(byAdding: .day, value: idx, to: weekStart)!
+                                    HourEventView(hour: hour, day: d, events: events)
+                                        .frame(width: geo.size.width / 8, height: 60)
+                                    if idx < 6 { Divider().frame(width: 1) }
                                 }
                             }
+                            Divider()
                         }
-                        Divider()
                     }
                 }
             }
         }
     }
 }
-
-
-//// MARK: - Sample Events
-//let sampleEvents: [CalendarEvent] = {
-//    let cal = Calendar.current
-//    var arr: [CalendarEvent] = []
-//    if let s1 = cal.date(bySettingHour: 9, minute: 0, second: 0, of: Date()),
-//       let e1 = cal.date(bySettingHour: 10, minute: 30, second: 0, of: Date()) {
-//        arr.append(.init(start: s1, end: e1, label: "Meeting", color: .orange))
-//    }
-//    if let s2 = cal.date(bySettingHour: 14, minute: 15, second: 10, of: Date()),
-//       let e2 = cal.date(bySettingHour: 15, minute: 0, second: 10, of: Date()) {
-//        arr.append(.init(start: s2, end: e2, label: "test", color: .red))
-//    }
-//    if let s3 = cal.date(bySettingHour: 13, minute: 15, second: 30, of: Date()),
-//       let e3 = cal.date(bySettingHour: 12, minute: 10, second: 20, of: Date()) {
-//        arr.append(.init(start: s3, end: e3, label: "Bamawl", color: .yellow))
-//    }
-//    return arr
-//}()
 
 struct CalendarView_Previews: PreviewProvider {
     static var previews: some View {
