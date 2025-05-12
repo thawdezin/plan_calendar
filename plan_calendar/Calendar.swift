@@ -29,21 +29,17 @@ enum EventColor: CaseIterable {
     }
 }
 
-// MARK: - Event Block View
+// MARK: - Event Block View (tap prints event)
 struct EventBlockView: View {
     let event: CalendarEvent
     var body: some View {
         HStack(spacing: 0) {
-            // Left colored bar
             Rectangle()
                 .fill(event.color.color)
                 .frame(width: 4)
-            
-            // Content
             VStack(spacing: 2) {
                 Text(event.timeRangeText)
-                    .font(.caption2)
-                    .bold()
+                    .font(.caption2).bold()
                 Spacer(minLength: 0)
                 Text(event.label)
                     .font(.caption)
@@ -57,6 +53,9 @@ struct EventBlockView: View {
                 .stroke(event.color.color, lineWidth: 1)
                 .background(Color.white.cornerRadius(8))
         )
+        .onTapGesture {
+            print("tap on event \(event.label) from \(event.timeRangeText)")
+        }
     }
 }
 
@@ -64,15 +63,13 @@ struct HourEventView: View {
     let hour: Int
     let day: Date
     let events: [CalendarEvent]
-    
     var body: some View {
         ZStack {
             ForEach(events) { ev in
-                // လိုချင်တဲ့ start/end နှစ်ခုရှိတဲ့ event ကို filter
                 let evStart = Calendar.current.component(.hour, from: ev.start)
                 if evStart == hour {
                     EventBlockView(event: ev)
-                        .frame(height: 50) // cell height ထည့်ပေး
+                        .frame(height: 50)
                         .padding(.vertical, 4)
                 }
             }
@@ -80,42 +77,44 @@ struct HourEventView: View {
     }
 }
 
-
 // MARK: - Calendar Cell
 struct CalendarCell: View {
     let date: Date?
     let events: [CalendarEvent]
-    let isCurrentMonth: Bool
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            GeometryReader { geo in
-                VStack(spacing: 2) {
-                    Text(date.map { DateFormatter.dayFormatter.string(from: $0) } ?? "")
-                        .font(.caption)
-                        .foregroundColor(isCurrentMonth ? .primary : .secondary)
-                    Spacer()
-                    HStack(spacing: 2) {
-                        ForEach(events.prefix(3)) { ev in
-                            Circle()
-                                .fill(ev.color.color)
-                                .frame(width: geo.size.width / 8, height: geo.size.width / 8)
-                        }
-                        if events.count > 3 {
-                            Text("+\(events.count - 3)")
-                                .font(.caption2)
-                                .foregroundColor(.gray)
-                        }
-                    }
-                }
-                .frame(width: geo.size.width, height: geo.size.height)
-            }
-        }
-        .contentShape(Rectangle())
-        .onTapGesture {
+        VStack(spacing: 2) {
             if let d = date {
-                print("tap on Calendar Cell of \(DateFormatter.fullDateFormatter.string(from: d))")
+                Button(action: {
+                    print("tap on Calendar Cell of \(DateFormatter.fullDateFormatter.string(from: d))")
+                }) {
+                    Text(DateFormatter.dayFormatter.string(from: d))
+                        .font(.caption)
+                        .foregroundColor(.primary)
+                }
+            } else {
+                Text("")
+                    .font(.caption)
+                    .foregroundColor(.primary)
+            }
+            Spacer()
+            // lower area tap lists events
+            VStack(spacing: 2) {
+                ForEach(events) { ev in
+                    EventBlockView(event: ev)
+                        .frame(height: 30)
+                }
+                if events.isEmpty {
+                    Spacer()
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if let d = date, !events.isEmpty {
+                    print("events for \(DateFormatter.fullDateFormatter.string(from: d)): \(events.map { $0.label })")
+                }
             }
         }
+        .padding(4)
     }
 }
 
@@ -126,31 +125,26 @@ struct DayView: View {
     var body: some View {
         VStack {
             HStack {
-                Button(action: { date = Calendar.current.date(byAdding: .day, value: -1, to: date)! }) {
-                    Image(systemName: "chevron.left")
-                }
+                Button { date = Calendar.current.date(byAdding: .day, value: -1, to: date)! } label: { Image(systemName: "chevron.left") }
                 Spacer()
                 Text(DateFormatter.weekdayDateFormatter.string(from: date))
                 Spacer()
-                Button(action: { date = Calendar.current.date(byAdding: .day, value: 1, to: date)! }) {
-                    Image(systemName: "chevron.right")
-                }
-            }
-            .padding()
+                Button { date = Calendar.current.date(byAdding: .day, value: 1, to: date)! } label: { Image(systemName: "chevron.right") }
+            }.padding()
             Divider()
             ScrollView {
                 VStack(spacing: 0) {
                     ForEach(0..<24) { hour in
-                        HStack {
+                        HStack(spacing: 0) {
                             Text(String(format: "%02d", hour))
                                 .frame(width: 40)
                             Divider()
-                            ZStack {
-                                Rectangle().fill(Color.clear)
+                            ZStack { Rectangle().fill(Color.clear)
                                 HourEventView(hour: hour, day: date, events: events)
                             }
                         }
                         .frame(height: 60)
+                        Divider()
                     }
                 }
             }
@@ -165,49 +159,53 @@ struct WeekView: View {
     var body: some View {
         VStack {
             HStack {
-                Button(action: { weekStart = Calendar.current.date(byAdding: .day, value: -7, to: weekStart)! }) {
-                    Image(systemName: "chevron.left")
-                }
+                Button { weekStart = Calendar.current.date(byAdding: .day, value: -7, to: weekStart)! } label: { Image(systemName: "chevron.left") }
                 Spacer()
                 let end = Calendar.current.date(byAdding: .day, value: 6, to: weekStart)!
                 Text("\(DateFormatter.simpleFormatter.string(from: weekStart)) - \(DateFormatter.simpleFormatter.string(from: end))")
                 Spacer()
-                Button(action: { weekStart = Calendar.current.date(byAdding: .day, value: 7, to: weekStart)! }) {
-                    Image(systemName: "chevron.right")
-                }
-            }
-            .padding()
+                Button { weekStart = Calendar.current.date(byAdding: .day, value: 7, to: weekStart)! } label: { Image(systemName: "chevron.right") }
+            }.padding()
             Divider()
             ScrollView([.vertical, .horizontal]) {
+                // day headers with tap areas
                 HStack(spacing: 0) {
-                    VStack { Text("") }.frame(width: 40)
+                    Text("").frame(width: 40)
                     ForEach(0..<7) { idx in
-                        let day = Calendar.current.date(byAdding: .day, value: idx, to: weekStart)!
+                        let d = Calendar.current.date(byAdding: .day, value: idx, to: weekStart)!
                         VStack {
-                            Text(DateFormatter.weekdayFormatter.string(from: day))
-                            Text(DateFormatter.dayFormatter.string(from: day))
+                            Button { print("tap on cell of \(DateFormatter.fullDateFormatter.string(from: Calendar.current.date(bySettingHour: 0, minute: 0, second: 0, of: d)!))") } label: {
+                                Text(DateFormatter.weekdayFormatter.string(from: d))
+                            }
+                            Button { print("events for \(DateFormatter.fullDateFormatter.string(from: d)): \(events.filter { Calendar.current.isDate($0.start, inSameDayAs: d) }.map { $0.label })") } label: {
+                                Text(DateFormatter.dayFormatter.string(from: d))
+                            }
                         }
-                        .frame(maxWidth: .infinity)
+                        .frame(width: 80)
                     }
                 }
+                // hours grid
                 ForEach(0..<24) { hour in
                     HStack(spacing: 0) {
                         Text(String(format: "%02d", hour))
                             .frame(width: 40)
+                        Divider()
                         ForEach(0..<7) { idx in
-                            let day = Calendar.current.date(byAdding: .day, value: idx, to: weekStart)!
+                            let d = Calendar.current.date(byAdding: .day, value: idx, to: weekStart)!
                             ZStack {
                                 Rectangle().fill(Color.clear)
-                                HourEventView(hour: hour, day: day, events: events)
+                                HourEventView(hour: hour, day: d, events: events)
                             }
                             .frame(width: 80, height: 60)
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                let tapped = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: day)!
+                                let tapped = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: d)!
                                 print("tap on cell of \(DateFormatter.fullDateFormatter.string(from: tapped))")
                             }
                         }
                     }
+                    .frame(height: 60)
+                    Divider()
                 }
             }
         }
@@ -221,39 +219,29 @@ struct MonthView: View {
     var body: some View {
         VStack {
             HStack {
-                Button(action: { month = Calendar.current.date(byAdding: .month, value: -1, to: month)! }) {
-                    Image(systemName: "chevron.left")
-                }
+                Button { month = Calendar.current.date(byAdding: .month, value: -1, to: month)! } label: { Image(systemName: "chevron.left") }
                 Spacer()
                 Text(DateFormatter.monthYearFormatter.string(from: month))
                 Spacer()
-                Button(action: { month = Calendar.current.date(byAdding: .month, value: 1, to: month)! }) {
-                    Image(systemName: "chevron.right")
-                }
+                Button { month = Calendar.current.date(byAdding: .month, value: 1, to: month)! } label: { Image(systemName: "chevron.right") }
             }
             .padding()
             Divider()
             let gridItems = Array(repeating: GridItem(.flexible()), count: 7)
-            // MARK: - Month View Event Filtering ပြင်ချက်
             LazyVGrid(columns: gridItems, spacing: 10) {
-                ForEach(DateHelper.makeMonthGrid(for: month), id: \.self) { date in
+                ForEach(DateHelper.makeMonthGrid(for: month), id: \ .self) { date in
                     CalendarCell(
                         date: date,
-                        // start date နဲ့ compare ပြောင်းပြီး filter
-                        events: events.filter {
-                            if let d = date {
-                                return Calendar.current.isDate($0.start, inSameDayAs: d)
+                        events: events.filter { d in
+                            if let d0 = date {
+                                return Calendar.current.isDate(d.start, inSameDayAs: d0)
                             }
                             return false
-                        },
-                        isCurrentMonth: date.map {
-                            Calendar.current.isDate($0, equalTo: month, toGranularity: .month)
-                        } ?? false
+                        }
                     )
-                    .frame(height: 60)
+                    .frame(height: 80)
                 }
             }
-
             .padding()
         }
     }
@@ -263,14 +251,12 @@ struct MonthView: View {
 struct DateHelper {
     static func makeMonthGrid(for date: Date) -> [Date?] {
         let cal = Calendar.current
-        guard let monthInterval = cal.dateInterval(of: .month, for: date) else { return [] }
-        let startWeekday = cal.component(.weekday, from: monthInterval.start) - 1
+        guard let interval = cal.dateInterval(of: .month, for: date) else { return [] }
+        let startWeekday = cal.component(.weekday, from: interval.start) - 1
         let days = cal.range(of: .day, in: .month, for: date)!
         var grid: [Date?] = Array(repeating: nil, count: startWeekday)
-        for day in days {
-            if let d = cal.date(bySetting: .day, value: day, of: date) {
-                grid.append(d)
-            }
+        for d in days {
+            grid.append(cal.date(bySetting: .day, value: d, of: date))
         }
         while grid.count % 7 != 0 { grid.append(nil) }
         return grid
@@ -278,36 +264,12 @@ struct DateHelper {
 }
 
 extension DateFormatter {
-    static let dayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "dd"
-        return f
-    }()
-    static let weekdayFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "EEE"
-        return f
-    }()
-    static let weekdayDateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "EEE, MMM d, yyyy"
-        return f
-    }()
-    static let monthYearFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "MMMM yyyy"
-        return f
-    }()
-    static let simpleFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "d MMM"
-        return f
-    }()
-    static let fullDateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "dd-MM-yyyy HH:mm"
-        return f
-    }()
+    static let dayFormatter: DateFormatter = { let f = DateFormatter(); f.dateFormat = "dd"; return f }()
+    static let weekdayFormatter: DateFormatter = { let f = DateFormatter(); f.dateFormat = "EEE"; return f }()
+    static let weekdayDateFormatter: DateFormatter = { let f = DateFormatter(); f.dateFormat = "EEE, MMM d, yyyy"; return f }()
+    static let monthYearFormatter: DateFormatter = { let f = DateFormatter(); f.dateFormat = "MMMM yyyy"; return f }()
+    static let simpleFormatter: DateFormatter = { let f = DateFormatter(); f.dateFormat = "d MMM"; return f }()
+    static let fullDateFormatter: DateFormatter = { let f = DateFormatter(); f.dateFormat = "dd-MM-yyyy HH:mm"; return f }()
 }
 
 // MARK: - Main Calendar View
@@ -340,28 +302,26 @@ struct CalendarView: View {
     }
 }
 
-// MARK: - Preview ContentView Usage
+// MARK: - Sample Events
+let sampleEvents: [CalendarEvent] = {
+    let cal = Calendar.current
+    var arr: [CalendarEvent] = []
+    if let s1 = cal.date(bySettingHour: 9, minute: 0, second: 0, of: Date()),
+       let e1 = cal.date(bySettingHour: 10, minute: 30, second: 0, of: Date()) {
+        arr.append(.init(start: s1, end: e1, label: "Meeting", color: .orange))
+    }
+    if let s2 = cal.date(bySettingHour: 14, minute: 15, second: 0, of: Date()),
+       let e2 = cal.date(bySettingHour: 15, minute: 0, second: 0, of: Date()) {
+        arr.append(.init(start: s2, end: e2, label: "test", color: .red))
+    }
+    return arr
+}()
+
 struct ContentView: View {
     var body: some View {
         CalendarView(events: sampleEvents)
     }
 }
-
-// MARK: - Sample Events ပြင်ချက်
-let sampleEvents: [CalendarEvent] = {
-    let cal = Calendar.current
-    var arr: [CalendarEvent] = []
-    // တစ်နေ့ ဗဟိုထားပြီး example events ၂ ခုပြ တဲ့အတွက်
-    if let start1 = cal.date(bySettingHour: 9, minute: 0, second: 0, of: Date()),
-       let end1   = cal.date(bySettingHour: 10, minute: 30, second: 0, of: Date()) {
-        arr.append(.init(start: start1, end: end1, label: "Meeting", color: .orange))
-    }
-    if let start2 = cal.date(bySettingHour: 14, minute: 15, second: 0, of: Date()),
-       let end2   = cal.date(bySettingHour: 15, minute: 0, second: 0, of: Date()) {
-        arr.append(.init(start: start2, end: end2, label: "test", color: .red))
-    }
-    return arr
-}()
 
 struct CalendarView_Previews: PreviewProvider {
     static var previews: some View {
