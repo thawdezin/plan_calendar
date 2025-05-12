@@ -101,10 +101,10 @@ struct CalendarCell: View {
             // Horizontal scrollable events
             if !events.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 2) {
                         ForEach(events) { ev in
                             EventBlockView(event: ev)
-                                .frame(width: 80, height: 30)
+                                .frame(width: 120, height: 50)
                         }
                     }
                     .padding(.horizontal, 2)
