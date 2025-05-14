@@ -191,28 +191,41 @@ struct HourEventView: View {
     }
 }
 
-// MARK: - Calendar Cell
+// MARK: - Calendar Cell (highlight today)
 struct CalendarCell: View {
     let date: Date?
     let events: [CalendarEvent]
+    
     var body: some View {
         VStack(spacing: 4) {
-            // Date number tap area
             if let d = date {
-                Button(action: {
-                    print("tap on Calendar Cell of \(DateFormatter.fullDateFormatter.string(from: d))")
-                }) {
-                    Text(DateFormatter.dayFormatter.string(from: d))
-                        .font(.caption)
-                        .foregroundColor(.primary)
+                ZStack {
+                    // 🟣 Today highlight circle
+                    if Calendar.current.isDate(d, inSameDayAs: Date()) {
+                        Circle()
+                            .fill(Color.purple.opacity(0.3))
+                            .frame(width: 32, height: 32)
+                    }
+                    
+                    // Date number button
+                    Button(action: {
+                        print("tap on Calendar Cell of \(DateFormatter.fullDateFormatter.string(from: d))")
+                    }) {
+                        Text(DateFormatter.dayFormatter.string(from: d))
+                            .font(.caption)
+                            .foregroundColor(.primary)
+                    }
                 }
             } else {
                 Text("")
                     .font(.caption)
                     .foregroundColor(.primary)
+                    .frame(height: 32)
             }
+            
             Spacer()
-            // Horizontal scrollable events
+            
+            // Events
             if !events.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 2) {
@@ -231,6 +244,7 @@ struct CalendarCell: View {
         .padding(4)
     }
 }
+
 
 // MARK: - Day View (fixed with scrollable events)
 struct DayView: View {
@@ -272,7 +286,7 @@ struct DayView: View {
 struct MonthView: View {
     @Binding var month: Date
     var events: [CalendarEvent]
-
+    
     var body: some View {
         VStack(spacing: 0) {
             // Month header
@@ -308,13 +322,13 @@ struct MonthView: View {
             }
             .padding(.vertical, 4)
             Divider()
-
+            
             // Month grid with Dividers
             let grid = DateHelper.makeMonthGrid(for: month)
             let rows = stride(from: 0, to: grid.count, by: 7).map {
                 Array(grid[$0 ..< min($0 + 7, grid.count)])
             }
-
+            
             VStack(spacing: 0) {
                 ForEach(rows.indices, id: \.self) { rowIndex in
                     HStack(spacing: 0) {
