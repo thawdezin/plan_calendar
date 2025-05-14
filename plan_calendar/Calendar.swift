@@ -6,12 +6,20 @@ struct WeekView: View {
     var events: [CalendarEvent]
     var body: some View {
         GeometryReader { geo in
+            // 1️⃣ weekStart ကို Sunday အစဖြစ်အောင် shift
+            let weekday = Calendar.current.component(.weekday, from: weekStart) // Sunday=1
+            let sundayStart = Calendar.current.date(
+                byAdding: .day,
+                value: 1 - weekday,
+                to: weekStart
+            )!
+
             VStack(spacing: 0) {
-                // Header
+                // Header (မပြောင်း)
                 HStack(spacing: 0) {
                     Button { weekStart = Calendar.current.date(byAdding: .day, value: -7, to: weekStart)! } label: { Image(systemName: "chevron.left") }
                         .frame(width: geo.size.width / 8)
-                    Text("\(DateFormatter.headerFormatter.string(from: weekStart)) - \(DateFormatter.headerFormatter.string(from: Calendar.current.date(byAdding: .day, value: 6, to: weekStart)!))")
+                    Text("\(DateFormatter.headerFormatter.string(from: sundayStart)) - \(DateFormatter.headerFormatter.string(from: Calendar.current.date(byAdding: .day, value: 6, to: sundayStart)!))")
                         .font(.subheadline)
                         .frame(width: geo.size.width * 6 / 8)
                     Button { weekStart = Calendar.current.date(byAdding: .day, value: 7, to: weekStart)! } label: { Image(systemName: "chevron.right") }
@@ -20,12 +28,12 @@ struct WeekView: View {
                 .padding(.vertical, 6)
                 Divider()
 
-                // Weekday names and dates
+                // Weekday names & dates (Sunday → Saturday)
                 HStack(spacing: 0) {
                     Text("")
                         .frame(width: geo.size.width / 8)
                     ForEach(0..<7) { idx in
-                        let d = Calendar.current.date(byAdding: .day, value: idx, to: weekStart)!
+                        let d = Calendar.current.date(byAdding: .day, value: idx, to: sundayStart)!
                         VStack(spacing: 2) {
                             Text(DateFormatter.weekdayShortFormatter.string(from: d))
                                 .font(.caption2)
@@ -48,7 +56,7 @@ struct WeekView: View {
                                     .frame(width: geo.size.width / 8)
                                 Divider()
                                 ForEach(0..<7) { idx in
-                                    let dayDate = Calendar.current.date(byAdding: .day, value: idx, to: weekStart)!
+                                    let dayDate = Calendar.current.date(byAdding: .day, value: idx, to: sundayStart)!
                                     HourEventView(hour: hour, day: dayDate, events: events)
                                         .frame(width: geo.size.width / 8, height: 60)
                                     if idx < 6 { Divider().frame(width: 1) }
