@@ -99,7 +99,7 @@ struct WeekView: View {
             }
         }
         .onAppear { notify() }
-        .onChange(of: weekStart) { _ in notify() }
+        .onChange(of: weekStart) { notify() }
     }
     
     private func notify() {
@@ -330,7 +330,7 @@ struct DayView: View {
             }
         }
         .onAppear { onDayChange(startOfDay, endOfDay) }
-        .onChange(of: date) { _ in onDayChange(startOfDay, endOfDay) }
+        .onChange(of: date) { onDayChange(startOfDay, endOfDay) }
     }
 }
 
@@ -425,7 +425,7 @@ struct MonthView: View {
             }
         }
         .onAppear { onMonthChange(startOfMonth, endOfMonth) }
-        .onChange(of: month) { _ in onMonthChange(startOfMonth, endOfMonth) }
+        .onChange(of: month) { onMonthChange(startOfMonth, endOfMonth) }
     }
 }
 
