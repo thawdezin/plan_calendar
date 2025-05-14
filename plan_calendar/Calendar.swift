@@ -4,6 +4,7 @@ import SwiftUI
 struct WeekView: View {
     @Binding var weekStart: Date
     var events: [CalendarEvent]
+    var onWeekChange: (Date, Date) -> Void = { _,_ in }
     var body: some View {
         GeometryReader { geo in
             // 1️⃣ weekStart ကို Sunday အစဖြစ်အောင် shift
@@ -13,7 +14,7 @@ struct WeekView: View {
                 value: 1 - weekday,
                 to: weekStart
             )!
-
+            
             VStack(spacing: 0) {
                 // Header (မပြောင်း)
                 HStack(spacing: 0) {
@@ -27,7 +28,7 @@ struct WeekView: View {
                 }
                 .padding(.vertical, 6)
                 Divider()
-
+                
                 // Weekday names & dates (Sunday → Saturday)
                 HStack(spacing: 0) {
                     Text("")
@@ -45,7 +46,7 @@ struct WeekView: View {
                 }
                 .padding(.vertical, 8)
                 Divider()
-
+                
                 // Hours grid with day dividers
                 ScrollView(.vertical) {
                     VStack(spacing: 0) {
@@ -68,6 +69,31 @@ struct WeekView: View {
                 }
             }
         }
+        .onAppear { notify() }
+        .onChange(of: weekStart) { _ in notify() }
+    }
+    
+    private func notify() {
+        let calendar = Calendar.current
+        let tz = calendar.timeZone
+        // weekStart ကို local timezone ဖြင့် startOfDay ထားပြီး weekday ကို တွက်မယ်
+        let localStart = calendar.startOfDay(for: weekStart)
+        let components = calendar.dateComponents(in: tz, from: localStart)
+        let weekday = components.weekday ?? 1  // Sunday=1, Monday=2, ... Saturday=7
+        
+        // Sunday အစနှင့် Saturday အဆုံးကို တွက်ချက်မယ်
+        let startOfWeek = calendar.date(
+            byAdding: .day,
+            value: -(weekday - 1),
+            to: localStart
+        )!
+        let endOfWeek = calendar.date(
+            byAdding: .day,
+            value: 6,
+            to: startOfWeek
+        )!
+        
+        onWeekChange(startOfWeek, endOfWeek)
     }
 }
 
@@ -221,7 +247,7 @@ struct DayView: View {
             }
             .padding(.vertical, 6)
             Divider()
-
+            
             ScrollView(.vertical) {
                 VStack(spacing: 0) {
                     ForEach(0..<24) { hour in
@@ -246,9 +272,9 @@ struct DayView: View {
 struct MonthView: View {
     @Binding var month: Date
     var events: [CalendarEvent]
-
+    
     private let weekdays = Calendar.current.weekdaySymbols // ["Sunday", "Monday", ...]
-
+    
     var body: some View {
         VStack(spacing: 0) {
             // Month header
@@ -261,7 +287,7 @@ struct MonthView: View {
             }
             .padding()
             Divider()
-
+            
             // ← ဒီနေရာမှာ Weekday Labels ထည့်မယ် →
             HStack(spacing: 0) {
                 ForEach(0..<7) { idx in
@@ -272,7 +298,7 @@ struct MonthView: View {
             }
             .padding(.vertical, 4)
             Divider()
-
+            
             // Month grid
             let gridItems = Array(repeating: GridItem(.flexible()), count: 7)
             LazyVGrid(columns: gridItems, spacing: 10) {
@@ -322,7 +348,7 @@ extension DateFormatter {
         f.dateFormat = "EEE"
         return f
     }()
-
+    
     static let headerFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "d MMM"
@@ -354,12 +380,21 @@ struct CalendarView: View {
             }
             .pickerStyle(SegmentedPickerStyle())
             .padding()
-
+            
             switch mode {
             case .day:
                 DayView(date: $currentDate, events: events)
             case .week:
-                WeekView(weekStart: $weekStart, events: events)
+                WeekView(weekStart: $weekStart, events: events) { startDate, endDate in
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+                    formatter.timeZone = Calendar.current.timeZone
+                    
+                    let startText = formatter.string(from: startDate)
+                    let endText   = formatter.string(from: endDate)
+                    print("📆 Week start: \(startText), end: \(endText)")
+                }
+                
             case .month:
                 MonthView(month: $monthDate, events: events)
             }
@@ -406,7 +441,7 @@ let sampleEvents: [CalendarEvent] = {
     ]
     var arr: [CalendarEvent] = []
     var idx = 1
-
+    
     // For each base date, add 4 events
     for (label, dateBase) in baseDates {
         let times: [(Int, Int)] = [(1,3), (1,2), (9,11), (14,15)]
@@ -423,7 +458,7 @@ let sampleEvents: [CalendarEvent] = {
             }
         }
     }
-
+    
     // Duplicate existing 16 items with different colors
     let original = arr
     for (i, ev) in original.enumerated() {
@@ -432,7 +467,7 @@ let sampleEvents: [CalendarEvent] = {
         newEv.id = UUID()
         arr.append(newEv)
     }
-
+    
     // If still less than 50, add extra events
     while arr.count < 50 {
         let dateBase = Date()
@@ -447,7 +482,7 @@ let sampleEvents: [CalendarEvent] = {
             ))
         }
     }
-
+    
     return arr
 }()
 
