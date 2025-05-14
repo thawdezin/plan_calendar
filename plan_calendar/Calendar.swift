@@ -268,22 +268,28 @@ struct DayView: View {
     }
 }
 
-// MARK: - Month View (with weekday labels)
+// MARK: - Month View
 struct MonthView: View {
     @Binding var month: Date
     var events: [CalendarEvent]
-    
-    private let weekdays = Calendar.current.weekdaySymbols // ["Sunday", "Monday", ...]
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Month header
             HStack {
-                Button { month = Calendar.current.date(byAdding: .month, value: -1, to: month)! } label: { Image(systemName: "chevron.left") }
+                Button {
+                    month = Calendar.current.date(byAdding: .month, value: -1, to: month)!
+                } label: {
+                    Image(systemName: "chevron.left")
+                }
                 Spacer()
                 Text(DateFormatter.monthYearFormatter.string(from: month))
                 Spacer()
-                Button { month = Calendar.current.date(byAdding: .month, value: 1, to: month)! } label: { Image(systemName: "chevron.right") }
+                Button {
+                    month = Calendar.current.date(byAdding: .month, value: 1, to: month)!
+                } label: {
+                    Image(systemName: "chevron.right")
+                }
             }
             .padding()
             Divider()
@@ -291,34 +297,53 @@ struct MonthView: View {
             // ← ဒီနေရာမှာ Weekday Labels ထည့်မယ် →
             HStack(spacing: 0) {
                 ForEach(0..<7) { idx in
-                    Text(DateFormatter.weekdayShortFormatter.string(from: Calendar.current.date(from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: month))!.addingTimeInterval(Double(idx) * 86400)))
-                        .font(.caption2)
-                        .frame(maxWidth: .infinity)
+                    Text(DateFormatter.weekdayShortFormatter.string(
+                        from: Calendar.current.date(
+                            from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: month)
+                        )!.addingTimeInterval(Double(idx) * 86400)
+                    ))
+                    .font(.caption2)
+                    .frame(maxWidth: .infinity)
                 }
             }
             .padding(.vertical, 4)
             Divider()
-            
-            // Month grid
-            let gridItems = Array(repeating: GridItem(.flexible()), count: 7)
-            LazyVGrid(columns: gridItems, spacing: 10) {
-                ForEach(DateHelper.makeMonthGrid(for: month), id: \.self) { date in
-                    CalendarCell(
-                        date: date,
-                        events: events.filter { d in
-                            if let d0 = date {
-                                return Calendar.current.isDate(d.start, inSameDayAs: d0)
+
+            // Month grid with Dividers
+            let grid = DateHelper.makeMonthGrid(for: month)
+            let rows = stride(from: 0, to: grid.count, by: 7).map {
+                Array(grid[$0 ..< min($0 + 7, grid.count)])
+            }
+
+            VStack(spacing: 0) {
+                ForEach(rows.indices, id: \.self) { rowIndex in
+                    HStack(spacing: 0) {
+                        ForEach(0..<7) { col in
+                            let date = rows[rowIndex][col]
+                            CalendarCell(
+                                date: date,
+                                events: events.filter { ev in
+                                    if let d0 = date {
+                                        return Calendar.current.isDate(ev.start, inSameDayAs: d0)
+                                    }
+                                    return false
+                                }
+                            )
+                            .frame(height: 80)
+                            .frame(maxWidth: .infinity)
+                            if col < 6 {
+                                Divider().frame(width: 1)
                             }
-                            return false
                         }
-                    )
-                    .frame(height: 80)
+                    }
+                    Divider()
                 }
             }
-            .padding()
         }
     }
 }
+
+
 
 // MARK: - Helpers & Formatters
 struct DateHelper {
@@ -431,13 +456,15 @@ let sampleEvents: [CalendarEvent] = {
     let year = cal.component(.year, from: Date())
     guard let yesterday = cal.date(byAdding: .day, value: -1, to: Date()),
           let tomorrow = cal.date(byAdding: .day, value: 1, to: Date()),
-          let june25 = cal.date(from: DateComponents(year: year, month: 6, day: 25))
+          let june25 = cal.date(from: DateComponents(year: year, month: 6, day: 25)),
+          let sept24 = cal.date(from: DateComponents(year: year, month: 9, day: 24))
     else { return [] }
     let baseDates: [(String, Date)] = [
         ("Yesterday", yesterday),
         ("Today", Date()),
         ("Tomorrow", tomorrow),
-        ("June 25", june25)
+        ("June 25", june25),
+        ("Sept 24", sept24)
     ]
     var arr: [CalendarEvent] = []
     var idx = 1
