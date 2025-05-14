@@ -5,26 +5,42 @@ struct WeekView: View {
     @Binding var weekStart: Date
     var events: [CalendarEvent]
     var onWeekChange: (Date, Date) -> Void = { _,_ in }
+    
     var body: some View {
         GeometryReader { geo in
-            // 1️⃣ weekStart ကို Sunday အစဖြစ်အောင် shift
-            let weekday = Calendar.current.component(.weekday, from: weekStart) // Sunday=1
-            let sundayStart = Calendar.current.date(
+            let calendar = Calendar.current
+            // Calculate Sunday start of the week
+            let localStart = calendar.startOfDay(for: weekStart)
+            let weekdayIndex = calendar.component(.weekday, from: localStart) // Sunday = 1
+            let sundayStart = calendar.date(
                 byAdding: .day,
-                value: 1 - weekday,
-                to: weekStart
+                value: -(weekdayIndex - 1),
+                to: localStart
             )!
             
             VStack(spacing: 0) {
-                // Header (မပြောင်း)
+                // Header
                 HStack(spacing: 0) {
-                    Button { weekStart = Calendar.current.date(byAdding: .day, value: -7, to: weekStart)! } label: { Image(systemName: "chevron.left") }
-                        .frame(width: geo.size.width / 8)
-                    Text("\(DateFormatter.headerFormatter.string(from: sundayStart)) - \(DateFormatter.headerFormatter.string(from: Calendar.current.date(byAdding: .day, value: 6, to: sundayStart)!))")
-                        .font(.subheadline)
-                        .frame(width: geo.size.width * 6 / 8)
-                    Button { weekStart = Calendar.current.date(byAdding: .day, value: 7, to: weekStart)! } label: { Image(systemName: "chevron.right") }
-                        .frame(width: geo.size.width / 8)
+                    Button {
+                        weekStart = calendar.date(byAdding: .day, value: -7, to: weekStart)!
+                    } label: {
+                        Image(systemName: "chevron.left")
+                    }
+                    .frame(width: geo.size.width / 8)
+                    
+                    Text(
+                        "\(DateFormatter.headerFormatter.string(from: sundayStart)) - " +
+                        "\(DateFormatter.headerFormatter.string(from: calendar.date(byAdding: .day, value: 6, to: sundayStart)!))"
+                    )
+                    .font(.subheadline)
+                    .frame(width: geo.size.width * 6 / 8)
+                    
+                    Button {
+                        weekStart = calendar.date(byAdding: .day, value: 7, to: weekStart)!
+                    } label: {
+                        Image(systemName: "chevron.right")
+                    }
+                    .frame(width: geo.size.width / 8)
                 }
                 .padding(.vertical, 6)
                 Divider()
@@ -33,15 +49,28 @@ struct WeekView: View {
                 HStack(spacing: 0) {
                     Text("")
                         .frame(width: geo.size.width / 8)
+                    
                     ForEach(0..<7) { idx in
-                        let d = Calendar.current.date(byAdding: .day, value: idx, to: sundayStart)!
+                        let date = calendar.date(byAdding: .day, value: idx, to: sundayStart)!
                         VStack(spacing: 2) {
-                            Text(DateFormatter.weekdayShortFormatter.string(from: d))
+                            Text(DateFormatter.weekdayShortFormatter.string(from: date))
                                 .font(.caption2)
-                            Text(DateFormatter.dayFormatter.string(from: d))
+                            Text(DateFormatter.dayFormatter.string(from: date))
                                 .font(.caption2)
                         }
                         .frame(width: geo.size.width / 8, height: 30)
+                        .background(
+                            // Highlight today using Circle
+                            Group {
+                                if calendar.isDate(date, inSameDayAs: Date()) {
+                                    Circle()
+                                        .fill(Color.purple.opacity(0.2))
+                                        .frame(width: 30, height: 30)
+                                        .offset(y: 15 - 30/2)
+                                } else {
+                                    Color.clear
+                                }
+                            }                        )
                     }
                 }
                 .padding(.vertical, 8)
@@ -57,7 +86,7 @@ struct WeekView: View {
                                     .frame(width: geo.size.width / 8)
                                 Divider()
                                 ForEach(0..<7) { idx in
-                                    let dayDate = Calendar.current.date(byAdding: .day, value: idx, to: sundayStart)!
+                                    let dayDate = calendar.date(byAdding: .day, value: idx, to: sundayStart)!
                                     HourEventView(hour: hour, day: dayDate, events: events)
                                         .frame(width: geo.size.width / 8, height: 60)
                                     if idx < 6 { Divider().frame(width: 1) }
@@ -75,24 +104,10 @@ struct WeekView: View {
     
     private func notify() {
         let calendar = Calendar.current
-        let tz = calendar.timeZone
-        // weekStart ကို local timezone ဖြင့် startOfDay ထားပြီး weekday ကို တွက်မယ်
         let localStart = calendar.startOfDay(for: weekStart)
-        let components = calendar.dateComponents(in: tz, from: localStart)
-        let weekday = components.weekday ?? 1  // Sunday=1, Monday=2, ... Saturday=7
-        
-        // Sunday အစနှင့် Saturday အဆုံးကို တွက်ချက်မယ်
-        let startOfWeek = calendar.date(
-            byAdding: .day,
-            value: -(weekday - 1),
-            to: localStart
-        )!
-        let endOfWeek = calendar.date(
-            byAdding: .day,
-            value: 6,
-            to: startOfWeek
-        )!
-        
+        let weekdayIndex = calendar.component(.weekday, from: localStart)
+        let startOfWeek = calendar.date(byAdding: .day, value: -(weekdayIndex - 1), to: localStart)!
+        let endOfWeek = calendar.date(byAdding: .day, value: 6, to: startOfWeek)!
         onWeekChange(startOfWeek, endOfWeek)
     }
 }
