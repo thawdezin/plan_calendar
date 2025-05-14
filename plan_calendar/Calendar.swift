@@ -297,25 +297,42 @@ struct DayView: View {
     }
 }
 
-// MARK: - Month View
+// MARK: - Month View with start/end dates
 struct MonthView: View {
     @Binding var month: Date
     var events: [CalendarEvent]
+    var onMonthChange: (Date, Date) -> Void = { _,_ in }
+    
+    private var calendar: Calendar { Calendar.current }
+    
+    private var startOfMonth: Date {
+        calendar.date(from: calendar.dateComponents([.year, .month], from: month))!
+    }
+    
+    private var endOfMonth: Date {
+        let range = calendar.range(of: .day, in: .month, for: startOfMonth)!
+        return calendar.date(byAdding: .day, value: range.count - 1, to: startOfMonth)!
+    }
     
     var body: some View {
         VStack(spacing: 0) {
-            // Month header
+            // Month header with start/end dates
             HStack {
                 Button {
-                    month = Calendar.current.date(byAdding: .month, value: -1, to: month)!
+                    month = calendar.date(byAdding: .month, value: -1, to: month)!
                 } label: {
                     Image(systemName: "chevron.left")
                 }
                 Spacer()
-                Text(DateFormatter.monthYearFormatter.string(from: month))
+                VStack {
+                    Text(DateFormatter.monthYearFormatter.string(from: month))
+                        .font(.headline)
+                    Text("\(DateFormatter.headerFormatter.string(from: startOfMonth)) - \(DateFormatter.headerFormatter.string(from: endOfMonth))")
+                        .font(.subheadline)
+                }
                 Spacer()
                 Button {
-                    month = Calendar.current.date(byAdding: .month, value: 1, to: month)!
+                    month = calendar.date(byAdding: .month, value: 1, to: month)!
                 } label: {
                     Image(systemName: "chevron.right")
                 }
@@ -323,12 +340,12 @@ struct MonthView: View {
             .padding()
             Divider()
             
-            // ← ဒီနေရာမှာ Weekday Labels ထည့်မယ် →
+            // Weekday labels
             HStack(spacing: 0) {
                 ForEach(0..<7) { idx in
                     Text(DateFormatter.weekdayShortFormatter.string(
-                        from: Calendar.current.date(
-                            from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: month)
+                        from: calendar.date(
+                            from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: month)
                         )!.addingTimeInterval(Double(idx) * 86400)
                     ))
                     .font(.caption2)
@@ -338,7 +355,7 @@ struct MonthView: View {
             .padding(.vertical, 4)
             Divider()
             
-            // Month grid with Dividers
+            // Month grid
             let grid = DateHelper.makeMonthGrid(for: month)
             let rows = stride(from: 0, to: grid.count, by: 7).map {
                 Array(grid[$0 ..< min($0 + 7, grid.count)])
@@ -348,18 +365,19 @@ struct MonthView: View {
                 ForEach(rows.indices, id: \.self) { rowIndex in
                     HStack(spacing: 0) {
                         ForEach(0..<7) { col in
-                            let date = rows[rowIndex][col]
+                            let dateOpt = rows[rowIndex][col]
                             CalendarCell(
-                                date: date,
+                                date: dateOpt,
                                 events: events.filter { ev in
-                                    if let d0 = date {
-                                        return Calendar.current.isDate(ev.start, inSameDayAs: d0)
+                                    if let d = dateOpt {
+                                        return calendar.isDate(ev.start, inSameDayAs: d)
                                     }
                                     return false
                                 }
                             )
                             .frame(height: 80)
                             .frame(maxWidth: .infinity)
+                            
                             if col < 6 {
                                 Divider().frame(width: 1)
                             }
@@ -369,6 +387,8 @@ struct MonthView: View {
                 }
             }
         }
+        .onAppear { onMonthChange(startOfMonth, endOfMonth) }
+        .onChange(of: month) { _ in onMonthChange(startOfMonth, endOfMonth) }
     }
 }
 
@@ -450,7 +470,16 @@ struct CalendarView: View {
                 }
                 
             case .month:
-                MonthView(month: $monthDate, events: events)
+                MonthView(month: $monthDate, events: events) { startDate, endDate in
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+                    formatter.timeZone = Calendar.current.timeZone
+//                    let startText = DateFormatter.headerFormatter.string(from: startDate)
+//                    let endText   = DateFormatter.headerFormatter.string(from: endDate)
+                    let startText = formatter.string(from: startDate)
+                    let endText   = formatter.string(from: endDate)
+                    print("📆 Month start: \(startText), end: \(endText)")
+                }
             }
         }
     }
