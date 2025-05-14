@@ -265,14 +265,45 @@ struct CalendarCell: View {
 struct DayView: View {
     @Binding var date: Date
     var events: [CalendarEvent]
+    var onDayChange: (Date, Date) -> Void = { _,_ in }
+    
+    private var startOfDay: Date {
+        Calendar.current.startOfDay(for: date)
+    }
+    
+    private var endOfDay: Date {
+        let start = startOfDay
+        return Calendar.current.date(
+            byAdding: .day,
+            value: 1,
+            to: start
+        )!.addingTimeInterval(-1)
+    }
+    
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Button { date = Calendar.current.date(byAdding: .day, value: -1, to: date)! } label: { Image(systemName: "chevron.left") }
+                Button {
+                    date = Calendar.current.date(
+                        byAdding: .day,
+                        value: -1,
+                        to: date
+                    )!
+                } label: {
+                    Image(systemName: "chevron.left")
+                }
                 Spacer()
                 Text(DateFormatter.weekdayDateFormatter.string(from: date))
                 Spacer()
-                Button { date = Calendar.current.date(byAdding: .day, value: 1, to: date)! } label: { Image(systemName: "chevron.right") }
+                Button {
+                    date = Calendar.current.date(
+                        byAdding: .day,
+                        value: 1,
+                        to: date
+                    )!
+                } label: {
+                    Image(systemName: "chevron.right")
+                }
             }
             .padding(.vertical, 6)
             Divider()
@@ -285,15 +316,21 @@ struct DayView: View {
                                 .font(.caption2)
                                 .frame(width: 40)
                             Divider()
-                            HourEventView(hour: hour, day: date, events: events)
-                                .frame(height: 60)
-                                .padding(.horizontal, 4)
+                            HourEventView(
+                                hour: hour,
+                                day: date,
+                                events: events
+                            )
+                            .frame(height: 60)
+                            .padding(.horizontal, 4)
                         }
                         Divider()
                     }
                 }
             }
         }
+        .onAppear { onDayChange(startOfDay, endOfDay) }
+        .onChange(of: date) { _ in onDayChange(startOfDay, endOfDay) }
     }
 }
 
@@ -457,7 +494,16 @@ struct CalendarView: View {
             
             switch mode {
             case .day:
-                DayView(date: $currentDate, events: events)
+                DayView(date: $currentDate, events: events) { startDate, endDate in
+                    let formatter = DateFormatter()
+                    formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
+                    formatter.timeZone = Calendar.current.timeZone
+//                    let s = DateFormatter.headerFormatter.string(from: startDate)
+//                    let e = DateFormatter.headerFormatter.string(from: endDate)
+                    let s = formatter.string(from: startDate)
+                    let e   = formatter.string(from: endDate)
+                    print("📆 Day start: \(s), end: \(e)")
+                }
             case .week:
                 WeekView(weekStart: $weekStart, events: events) { startDate, endDate in
                     let formatter = DateFormatter()
@@ -474,8 +520,8 @@ struct CalendarView: View {
                     let formatter = DateFormatter()
                     formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
                     formatter.timeZone = Calendar.current.timeZone
-//                    let startText = DateFormatter.headerFormatter.string(from: startDate)
-//                    let endText   = DateFormatter.headerFormatter.string(from: endDate)
+                    //                    let startText = DateFormatter.headerFormatter.string(from: startDate)
+                    //                    let endText   = DateFormatter.headerFormatter.string(from: endDate)
                     let startText = formatter.string(from: startDate)
                     let endText   = formatter.string(from: endDate)
                     print("📆 Month start: \(startText), end: \(endText)")
