@@ -234,12 +234,16 @@ struct DayView: View {
     }
 }
 
-// MARK: - Month View
+// MARK: - Month View (with weekday labels)
 struct MonthView: View {
     @Binding var month: Date
     var events: [CalendarEvent]
+
+    private let weekdays = Calendar.current.weekdaySymbols // ["Sunday", "Monday", ...]
+
     var body: some View {
-        VStack {
+        VStack(spacing: 0) {
+            // Month header
             HStack {
                 Button { month = Calendar.current.date(byAdding: .month, value: -1, to: month)! } label: { Image(systemName: "chevron.left") }
                 Spacer()
@@ -249,9 +253,22 @@ struct MonthView: View {
             }
             .padding()
             Divider()
+
+            // ← ဒီနေရာမှာ Weekday Labels ထည့်မယ် →
+            HStack(spacing: 0) {
+                ForEach(0..<7) { idx in
+                    Text(DateFormatter.weekdayShortFormatter.string(from: Calendar.current.date(from: Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: month))!.addingTimeInterval(Double(idx) * 86400)))
+                        .font(.caption2)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.vertical, 4)
+            Divider()
+
+            // Month grid
             let gridItems = Array(repeating: GridItem(.flexible()), count: 7)
             LazyVGrid(columns: gridItems, spacing: 10) {
-                ForEach(DateHelper.makeMonthGrid(for: month), id: \ .self) { date in
+                ForEach(DateHelper.makeMonthGrid(for: month), id: \.self) { date in
                     CalendarCell(
                         date: date,
                         events: events.filter { d in
@@ -302,6 +319,11 @@ extension DateFormatter {
         let f = DateFormatter()
         f.dateFormat = "d MMM"
         return f
+    }()
+    static let timeFormatter: DateFormatter = {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "HH:mm"
+        return fmt
     }()
 }
 
